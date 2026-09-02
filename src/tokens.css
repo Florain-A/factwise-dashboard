@@ -1,0 +1,13 @@
+:root {
+  --color-page-background: #f5f7fb;
+  --color-text-primary: #172033;
+  --color-header-background: #111827;
+  --color-text-on-header: #ffffff;
+  --color-text-muted: #9ca3af;
+  --color-text-secondary: #6b7280;
+  --color-border: #d1d5db;
+  --color-border-subtle: #e5e7eb;
+  --color-surface: #ffffff;
+  --color-focus: #6366f1;
+  --color-focus-ring: rgb(99 102 241 / 10%);
+}
