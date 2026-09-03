@@ -1,39 +1,240 @@
-import { useMemo, useState } from "react";
+import {
+  useMemo,
+  useState,
+  useEffect,
+  useRef,
+} from "react";
+
 import { AgGridReact } from "ag-grid-react";
-import { AllCommunityModule, ModuleRegistry } from "ag-grid-community";
+
+import {
+  AllCommunityModule,
+  ModuleRegistry,
+} from "ag-grid-community";
+
 import employeeData from "./data/employees.json";
+import { translations } from "./constants/translations";
+
+import Header from "./components/header";
+import DashboardStats from "./components/dashboardStats";
+import EmployeeToolbar from "./components/employeeToolbar";
+
+import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
+import CancelRoundedIcon from "@mui/icons-material/CancelRounded";
+import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+
 import "./App.css";
 
-ModuleRegistry.registerModules([AllCommunityModule]);
+ModuleRegistry.registerModules([
+  AllCommunityModule,
+]);
+
+const StatusRenderer = (params) => {
+  const isActive = params.value;
+
+  const activeLabel =
+    params.activeLabel || "Active";
+
+  const inactiveLabel =
+    params.inactiveLabel || "Inactive";
+
+  return (
+    <span
+      className={`status-badge ${
+        isActive
+          ? "status-active"
+          : "status-inactive"
+      }`}
+    >
+      {isActive ? (
+        <CheckCircleRoundedIcon
+          className="status-icon"
+        />
+      ) : (
+        <CancelRoundedIcon
+          className="status-icon"
+        />
+      )}
+
+      <span>
+        {isActive
+          ? activeLabel
+          : inactiveLabel}
+      </span>
+    </span>
+  );
+};
+
+const StatusEditor = (params) => {
+  const [isOpen, setIsOpen] =
+    useState(true);
+
+  const editorRef = useRef(null);
+
+  const activeLabel =
+    params.activeLabel || "Active";
+
+  const inactiveLabel =
+    params.inactiveLabel || "Inactive";
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.focus();
+    }
+  }, []);
+
+  const selectStatus = (value) => {
+    params.node.setDataValue(
+      "isActive",
+      value
+    );
+
+    params.stopEditing();
+  };
+
+  return (
+    <div
+      ref={editorRef}
+      className="status-editor"
+      tabIndex={-1}
+    >
+      <button
+        type="button"
+        className="status-editor-trigger"
+        onClick={() =>
+          setIsOpen((previous) => !previous)
+        }
+      >
+        <span
+          className={`status-badge ${
+            params.value
+              ? "status-active"
+              : "status-inactive"
+          }`}
+        >
+          {params.value ? (
+            <CheckCircleRoundedIcon
+              className="status-icon"
+            />
+          ) : (
+            <CancelRoundedIcon
+              className="status-icon"
+            />
+          )}
+
+          <span>
+            {params.value
+              ? activeLabel
+              : inactiveLabel}
+          </span>
+        </span>
+
+        <KeyboardArrowDownRoundedIcon
+          className="status-editor-arrow"
+        />
+      </button>
+
+      {isOpen && (
+        <div className="status-options">
+          <button
+            type="button"
+            className="status-option status-option-active"
+            onClick={() =>
+              selectStatus(true)
+            }
+          >
+            <CheckCircleRoundedIcon />
+
+            <span>
+              {activeLabel}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            className="status-option status-option-inactive"
+            onClick={() =>
+              selectStatus(false)
+            }
+          >
+            <CancelRoundedIcon />
+
+            <span>
+              {inactiveLabel}
+            </span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
 
 function App() {
-  const [searchText, setSearchText] = useState("");
+  const [searchText, setSearchText] =
+    useState("");
 
-  const employees = employeeData.employees ?? [];
+  const [theme, setTheme] =
+    useState("light");
 
-  // Dashboard metrics
+  const [language, setLanguage] =
+    useState("en");
+
+  const [fontScale, setFontScale] =
+    useState(1);
+
+  const t =
+    translations[language] ||
+    translations.en;
+
+  const employees =
+    employeeData.employees ?? [];
+
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-theme",
+      theme
+    );
+  }, [theme]);
+
+  useEffect(() => {
+    document.documentElement.style.setProperty(
+      "--font-scale",
+      fontScale
+    );
+  }, [fontScale]);
+
   const dashboardMetrics = useMemo(() => {
-    const totalEmployees = employees.length;
+    const totalEmployees =
+      employees.length;
 
-    const activeEmployees = employees.filter(
-      (employee) => employee.isActive
-    ).length;
+    const activeEmployees =
+      employees.filter(
+        (employee) =>
+          employee.isActive
+      ).length;
 
     const averagePerformance =
       totalEmployees > 0
         ? (
             employees.reduce(
               (total, employee) =>
-                total + (employee.performanceRating ?? 0),
+                total +
+                (
+                  employee.performanceRating ??
+                  0
+                ),
               0
             ) / totalEmployees
           ).toFixed(1)
         : "0.0";
 
-    const totalPayroll = employees.reduce(
-      (total, employee) => total + (employee.salary ?? 0),
-      0
-    );
+    const totalPayroll =
+      employees.reduce(
+        (total, employee) =>
+          total +
+          (employee.salary ?? 0),
+        0
+      );
 
     return {
       totalEmployees,
@@ -46,152 +247,200 @@ function App() {
   const columnDefs = useMemo(
     () => [
       {
-        headerName: "Employee",
-        minWidth: 200,
-        flex: 1,
+        headerName: t.employee,
+        flex: 1.25,
+        minWidth: 145,
+
         valueGetter: (params) =>
-          `${params.data.firstName} ${params.data.lastName}`,
-      },
-      {
-        field: "department",
-        headerName: "Department",
-        filter: true,
-      },
-      {
-        field: "position",
-        headerName: "Position",
-        minWidth: 190,
-        flex: 1,
-      },
-      {
-        field: "salary",
-        headerName: "Salary",
-        filter: "agNumberColumnFilter",
-        valueFormatter: (params) =>
-          params.value != null
-            ? new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-                maximumFractionDigits: 0,
-              }).format(params.value)
+          params.data
+            ? `${params.data.firstName} ${params.data.lastName}`
             : "",
       },
+
+      {
+        field: "department",
+        headerName: t.department,
+        flex: 1,
+        minWidth: 125,
+      },
+
+      {
+        field: "position",
+        headerName: t.position,
+        flex: 1.2,
+        minWidth: 145,
+      },
+
+      {
+        field: "salary",
+        headerName: t.salary,
+        flex: 0.9,
+        minWidth: 110,
+
+        valueFormatter: (params) =>
+          params.value != null
+            ? new Intl.NumberFormat(
+                "en-US",
+                {
+                  style: "currency",
+                  currency: "USD",
+                  maximumFractionDigits: 0,
+                }
+              ).format(params.value)
+            : "",
+      },
+
       {
         field: "hireDate",
-        headerName: "Hire Date",
-        filter: "agDateColumnFilter",
+        headerName: t.hireDate,
+        flex: 1,
+        minWidth: 120,
       },
+
       {
         field: "age",
-        headerName: "Age",
-        filter: "agNumberColumnFilter",
-        maxWidth: 100,
+        headerName: t.age,
+        flex: 0.55,
+        minWidth: 70,
       },
+
       {
         field: "performanceRating",
-        headerName: "Performance",
-        filter: "agNumberColumnFilter",
-        maxWidth: 140,
+        headerName: t.performance,
+        flex: 0.85,
+        minWidth: 105,
       },
+
       {
         field: "projectsCompleted",
-        headerName: "Projects",
-        filter: "agNumberColumnFilter",
-        maxWidth: 120,
+        headerName: t.projects,
+        flex: 0.7,
+        minWidth: 90,
       },
+
       {
         field: "location",
-        headerName: "Location",
-        filter: true,
+        headerName: t.location,
+        flex: 0.9,
+        minWidth: 110,
       },
+
       {
         field: "isActive",
-        headerName: "Status",
-        filter: true,
-        maxWidth: 120,
-        valueFormatter: (params) =>
-          params.value ? "Active" : "Inactive",
+        headerName: t.status,
+        flex: 0.9,
+        minWidth: 125,
+
+        editable: true,
+
+        cellEditorPopup: true,
+
+        cellEditorPopupPosition:
+          "under",
+
+        cellRenderer: StatusRenderer,
+
+        cellRendererParams: {
+          activeLabel:
+            t.active || "Active",
+
+          inactiveLabel:
+            t.inactive || "Inactive",
+        },
+
+        cellEditor: StatusEditor,
+
+        cellEditorParams: {
+          activeLabel:
+            t.active || "Active",
+
+          inactiveLabel:
+            t.inactive || "Inactive",
+        },
+
+        cellClass: "status-cell",
       },
     ],
-    []
+
+    [t]
   );
 
   const defaultColDef = useMemo(
     () => ({
       sortable: true,
+
       resizable: true,
+
       filter: true,
+
+      suppressMovable: true,
     }),
+
     []
   );
 
   return (
     <div className="app">
-      <header className="header">
-        <div>
-          <h1>FactWise</h1>
-          <p>Employee Analytics Dashboard</p>
-        </div>
-      </header>
-
-      <main className="content">
-        {/* Dashboard Statistics */}
-        <section className="stats-grid">
-          <div className="stat-card">
-            <span className="stat-label">Total Employees</span>
-            <strong>{dashboardMetrics.totalEmployees}</strong>
-          </div>
-
-          <div className="stat-card">
-            <span className="stat-label">Active Employees</span>
-            <strong>{dashboardMetrics.activeEmployees}</strong>
-          </div>
-
-          <div className="stat-card">
-            <span className="stat-label">Average Performance</span>
-            <strong>{dashboardMetrics.averagePerformance}</strong>
-            <span className="stat-suffix">/ 5.0</span>
-          </div>
-
-          <div className="stat-card">
-            <span className="stat-label">Total Annual Payroll</span>
-            <strong>
-              {new Intl.NumberFormat("en-US", {
-                style: "currency",
-                currency: "USD",
-                notation: "compact",
-                maximumFractionDigits: 1,
-              }).format(dashboardMetrics.totalPayroll)}
-            </strong>
-          </div>
-        </section>
-
-        <section className="toolbar">
-          <div>
-            <h2>Employees</h2>
-            <p>{employees.length} employees in the dataset</p>
-          </div>
-
-          <input
-            type="text"
-            placeholder="Search employees..."
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            aria-label="Search employees"
-          />
-        </section>
-
-        <section className="grid-wrapper">
-        <AgGridReact
-        rowData={employees}
-        columnDefs={columnDefs}
-        defaultColDef={defaultColDef}
-        quickFilterText={searchText}
-        pagination={true}
-        paginationPageSize={10}
-        paginationPageSizeSelector={[10, 20, 50]}
-        animateRows={true}
+      <Header
+        theme={theme}
+        setTheme={setTheme}
+        language={language}
+        setLanguage={setLanguage}
+        setFontScale={setFontScale}
+        t={t}
       />
+
+      <main className="content dashboard-layout">
+        <DashboardStats
+          dashboardMetrics={
+            dashboardMetrics
+          }
+          t={t}
+        />
+
+        <EmployeeToolbar
+          employeeCount={
+            employees.length
+          }
+          searchText={searchText}
+          setSearchText={
+            setSearchText
+          }
+          t={t}
+        />
+
+        <section
+          className={`grid-wrapper ${
+            theme === "dark"
+              ? "ag-theme-quartz-dark"
+              : "ag-theme-quartz"
+          }`}
+        >
+          <AgGridReact
+            rowData={employees}
+            columnDefs={columnDefs}
+            defaultColDef={
+              defaultColDef
+            }
+            quickFilterText={
+              searchText
+            }
+            pagination={true}
+            paginationPageSize={10}
+            paginationPageSizeSelector={[
+              10,
+              20,
+              50,
+            ]}
+            animateRows={true}
+            domLayout="autoHeight"
+            rowHeight={52}
+            headerHeight={52}
+            singleClickEdit={true}
+            stopEditingWhenCellsLoseFocus={
+              true
+            }
+          />
         </section>
       </main>
     </div>
